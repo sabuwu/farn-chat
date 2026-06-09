@@ -21,64 +21,72 @@ class ServerController
      * CREATE: POST /servers
      * Cria um novo servidor e automaticamente adiciona o criador como membro.
      */
-    public function create(): void
+     
+             /**
+     * READ: GET /api/servers
+     * Lista todos os servidores em que o usuário logado é membro.
+     */
+    public function listByUser(): void
     {
         header('Content-Type: application/json');
         
-        $input = json_decode(file_get_contents('php://input'), true);
-        $fullname = $input['fullname'] ?? '';
-        $description = $input['description'] ?? null;
-        $ownerId = $_SESSION['user_id'] ?? 1; // Mock defensivo enquanto o Auth finaliza
+        // Captura o usuário logado na sessão (o usuário 6)
+        $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 
-        if (empty($fullname)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'O nome do servidor é obrigatório.']);
+        if (!$userId) {
+            error_log("=== [READ SERVER ALERTA] listByUser chamado sem usuário logado na sessão ===");
+            http_response_code(401);
+            echo json_encode(['error' => 'Não autenticado.']);
             return;
         }
 
         try {
-            $this->db->beginTransaction();
-
-            // 1. Insere o servidor
+            // Esta query exige que o usuário exista na tabela 'server_members'
             $stmt = $this->db->prepare('
-                INSERT INTO servers (owner_id, fullname, description) 
-                VALUES (:owner_id, :fullname, :description)
+                SELECT s.id, s.fullname, s.description 
+                FROM servers s
+                JOIN server_members sm ON s.id = sm.server_id
+                WHERE sm.user_id = :user_id
+                ORDER BY s.created_at DESC
             ');
-            $stmt->execute([
-                ':owner_id'    => $ownerId,
-                ':fullname'    => $fullname,
-                ':description' => $description
-            ]);
+            $stmt->execute([':user_id' => $userId]);
+            $servers = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            $serverId = (int)$this->db->lastInsertId();
+            // TELEMETRIA: Mostra no Termux quantos servidores foram achados para o usuário 6
+            error_log("=== [READ SERVER] Encontrados " . count($servers) . " servidores para o User ID: {$userId} ===");
 
-            // 2. Cria automaticamente o canal #geral para o novo servidor
-            $stmtChannel = $this->db->prepare('
-                INSERT INTO channels (server_id, fullname) 
-                VALUES (:server_id, :fullname)
-            ');
-            $stmtChannel->execute([
-                ':server_id' => $serverId,
-                ':fullname'  => 'geral'
-            ]);
-
-            // 3. Vincula o criador como membro do servidor
-            $stmtMember = $this->db->prepare('
-                INSERT INTO server_members (server_id, user_id) 
-                VALUES (:server_id, :user_id)
-            ');
-            $stmtMember->execute([
-                ':server_id' => $serverId,
-                ':user_id'   => $ownerId
-            ]);
-
-            $this->db->commit();
-            http_response_code(201);
-            echo json_encode(['success' => true, 'server_id' => $serverId]);
-        } catch (Exception $e) {
-            $this->db->rollBack();
+            echo json_encode(['success' => true, 'data' => $servers]);
+            exit;
+        } catch (\Throwable $e) {
+            error_log("=== [READ SERVER ERRO] Falha ao listar: " . $e->getMessage() . " ===");
             http_response_code(500);
-            echo json_encode(['error' => 'Falha ao criar servidor: ' . $e->getMessage()]);
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
+        }
+    }
+
+
+    
+    public function listByUser(): void
+    {
+        header('Content-Type: application/json');
+        $userId = $_SESSION['user_id'] ?? 1;
+
+        try {
+            $stmt = $this->db->prepare('
+                SELECT s.id, s.fullname, s.description 
+                FROM servers s
+                JOIN server_members sm ON s.id = sm.server_id
+                WHERE sm.user_id = :user_id
+                ORDER BY s.created_at DESC
+            ');
+            $stmt->execute([':user_id' => $userId]);
+            $servers = $stmt->fetchAll();
+
+            echo json_encode(['success' => true, 'data' => $servers]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
         }
     }
 

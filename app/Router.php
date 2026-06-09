@@ -37,34 +37,44 @@ final class Router
         $this->routes[$method][$pattern] = $handler;
     }
 
-    public function dispatch(string $method, string $uri): void
+        public function dispatch(string $method, string $uri): void
     {
         $path = parse_url($uri, PHP_URL_PATH) ?? '/';
 
         foreach ($this->routes[$method] ?? [] as $pattern => $handler) {
             if (preg_match($pattern, $path, $matches)) {
                 
-                // Filtra o array do Regex para pegar apenas os parâmetros nomeados
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
-                if (is_array($handler)) {
-                    [$controller, $action] = $handler;
-                    $instance = new $controller();
-                    
-                    // O PHP 8 entende os parâmetros nomeados e faz o binding automático
-                    $instance->$action(...$params);
-                    return;
-                }
+                try {
+                    if (is_array($handler)) {
+                        [$controller, $action] = $handler;
+                        
+                        // Telemetria bruta para sabermos se o PHP conseguiu instanciar a classe
+                        error_log("=== [ROUTER MATCH] Invocando: {$controller}->{$action} ===");
+                        
+                        $instance = new $controller();
+                        $instance->$action(...$params);
+                        return;
+                    }
 
-                $handler(...$params);
-                return;
+                    $handler(...$params);
+                    return;
+                } catch (\Throwable $e) {
+                    // Se o Controller falhar internamente, o Roteador bota a boca no trombone
+                    error_log("=== [ROUTER FATAL] O Controller capotou internamente: " . $e->getMessage() . " ===");
+                    http_response_code(500);
+                    header('Content-Type: application/json');
+                    echo json_encode(['error' => $e->getMessage()]);
+                    exit;
+                }
             }
         }
 
-        // Resposta segura em formato JSON para requisições de API não encontradas
         http_response_code(404);
         header('Content-Type: application/json');
         echo json_encode(['error' => 'Route not found']);
         exit;
     }
+
 }
