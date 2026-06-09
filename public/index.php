@@ -2,17 +2,29 @@
 
 declare(strict_types=1);
 
+// 1. Inicialização defensiva de sessão
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 1. Carrega as dependências externas do vendor (se houver)
+// 2. AUTOLOADER EMbutido - Joga as classes na memória respeitando o case minúsculo
+spl_autoload_register(function (string $className) {
+    $classPath = str_replace('\\', '/', $className);
+    $fullPath = dirname(__DIR__) . '/' . $classPath . '.php';
+    
+    if (file_exists($fullPath)) {
+        require_once $fullPath;
+    } else {
+        error_log("=== [AUTOLOADER] Arquivo ausente: {$fullPath} ===");
+    }
+});
+
+// 3. Dependências de pacotes (Composer) se existirem
 if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
     require_once dirname(__DIR__) . '/vendor/autoload.php';
 }
 
-require_once dirname(__DIR__) . '/app/Router.php';
-
+// Tudo estritamente conversando em "app" minúsculo
 use app\Router;
 use app\Controllers\HomeController;
 use app\Controllers\UserController;
@@ -23,7 +35,6 @@ use app\Controllers\ChannelController;
 
 $router = new Router();
 
-// 3. Telemetria de Rotas no Terminal do Termux
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
 error_log("=== [ROUTER OPSEC] Mapeando: {$method} {$uri} ===");
@@ -58,5 +69,4 @@ if (strpos($uri, '/dashboard') === 0 || strpos($uri, '/api') === 0) {
     \app\Middleware\AuthMiddleware::handle();
 }
 
-// 4. Despacha a requisição para o Controller correspondente
 $router->dispatch($method, $uri);
