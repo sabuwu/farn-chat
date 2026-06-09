@@ -175,13 +175,18 @@ final class UserController
         }
 
         try {
-            // Dispara a lógica de criação de token e escrita de log
-            $this->userService->generatePasswordReset($email);
-
-            // OpSec: Sucesso genérico independente se o e-mail existe na base de dados ou não
-            $_SESSION['success'] = 'Se o e-mail existir, as instruções foram enviadas aos logs do sistema!';
-            
-            header('Location: /forgot-password');
+            // Valida as credenciais na UserService
+            $userData = $this->userService->authenticate($email, $password);
+    
+            // Regenera o ID por OpSec (evita Session Fixation)
+            session_regenerate_id(true);
+    
+            // CHAVALETAS PADRONIZADAS: Sem underline para bater com o banco e o Chat!
+            $_SESSION['user_id']  = (int)$userData['id'];
+            $_SESSION['username'] = $userData['username'] ?? $userData['name'] ?? 'sabu'; 
+    
+            // Redireciona o usuário autenticado para a homepage do farn-chat
+            header('Location: /dashboard');
             exit();
         } catch (Exception $e) {
             $_SESSION['error'] = $e->getMessage();

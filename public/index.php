@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-// 1. Inicialização primária da Sessão
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 2. Carregamento dos caminhos e Autoloaders
-require_once dirname(__DIR__) . '/app/bootstrap.php';
+// 1. Carrega as dependências externas do vendor (se houver)
 if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
     require_once dirname(__DIR__) . '/vendor/autoload.php';
 }
