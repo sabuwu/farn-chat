@@ -44,7 +44,7 @@ $router->get('/', [HomeController::class, 'index']);
 $router->get('/signup', [UserController::class, 'renderSignup']);
 $router->post('/signup', [UserController::class, 'signup']);
 $router->get('/signin', [UserController::class, 'renderSignin']);
-$router->post('/signin', [UserController::class, 'signin']);
+$router->post('/signin', [UserController::class, 'signIn']);
 $router->get('/forgot-password', [UserController::class, 'renderForgotPassword']);
 $router->post('/forgot-password', [UserController::class, 'forgotPassword']);
 

@@ -20,6 +20,13 @@ services:
 
     restart: unless-stopped
 
+    environment:
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-farn_chat}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root_secure_pass}
+
     volumes:
       - ./:/var/www/html
 
