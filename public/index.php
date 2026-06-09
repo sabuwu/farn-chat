@@ -13,13 +13,13 @@ if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
 
 require_once dirname(__DIR__) . '/app/Router.php';
 
-use App\Router;
-use App\Controllers\HomeController;
-use App\Controllers\UserController;
-use App\Controllers\ChatController;
-use App\Controllers\MessageController;
-use App\Controllers\ServerController; 
-use App\Controllers\ChannelController;
+use app\Router;
+use app\Controllers\HomeController;
+use app\Controllers\UserController;
+use app\Controllers\ChatController;
+use app\Controllers\MessageController;
+use app\Controllers\ServerController; 
+use app\Controllers\ChannelController;
 
 $router = new Router();
 
@@ -55,7 +55,7 @@ $router->post('/api/channels/{id}/delete', [ChannelController::class, 'delete'])
 
 # =+=+=+==+=+=+= FIREWALL DE SESSÃO (OPSEC) =+=+=+==+=+=+=
 if (strpos($uri, '/dashboard') === 0 || strpos($uri, '/api') === 0) {
-    \App\Middleware\AuthMiddleware::handle();
+    \app\Middleware\AuthMiddleware::handle();
 }
 
 // 4. Despacha a requisição para o Controller correspondente
