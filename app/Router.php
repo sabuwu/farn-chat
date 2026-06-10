@@ -62,7 +62,7 @@ final class Router
                     error_log("=== [ROUTER FATAL] O Controller capotou internamente: " . $e->getMessage() . " ===");
                     http_response_code(500);
                     header('Content-Type: application/json');
-                    echo json_encode(['error' => $e->getMessage()]);
+                    echo json_encode(['error' => 'Erro interno.']);
                     exit;
                 }
             }

@@ -69,6 +69,23 @@ final class UserController
             echo "Janela de recuperação não encontrada... ;-; (Caminho esperado: {$viewPath})";
         }
     }
+
+    /**
+     * Renderiza a tela de redefinição de senha
+     */
+    public function renderResetPassword(): void
+    {
+        $pageTitle = 'Redefinir senha - Farn-Chat';
+        $viewPath = dirname(__DIR__) . '/Views/auth/reset-password.php';
+        $token = trim((string) ($_GET['token'] ?? ''));
+
+        if (file_exists($viewPath)) {
+            include $viewPath;
+        } else {
+            http_response_code(500);
+            echo "Janela de redefinição não encontrada... ;-; (Caminho esperado: {$viewPath})";
+        }
+    }
     
     /**
      * Processa a requisição POST para criação de conta
@@ -175,24 +192,40 @@ final class UserController
         }
 
         try {
-            // Valida as credenciais na UserService
-            $userData = $this->userService->authenticate($email, $password);
-    
-            // Regenera o ID por OpSec (evita Session Fixation)
-            session_regenerate_id(true);
-    
-            // CHAVALETAS PADRONIZADAS: Sem underline para bater com o banco e o Chat!
-            $_SESSION['user_id']  = (int)$userData['id'];
-            $_SESSION['username'] = $userData['username'] ?? $userData['name'] ?? 'sabu'; 
-    
-            // Redireciona o usuário autenticado para a homepage do farn-chat
-            header('Location: /dashboard');
+            $this->userService->generatePasswordReset($email);
+            $_SESSION['success'] = 'Se a conta existir, um link de recuperação foi gerado.';
+            header('Location: /forgot-password');
+            exit();
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'Não foi possível processar a solicitação agora.';
+            $this->renderForgotPassword();
+            exit();
+        }
+    }
+
+    /**
+     * Processa a redefinição de senha via token
+     */
+    public function resetPassword(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /forgot-password');
+            exit();
+        }
+
+        $token = trim((string) ($_POST['token'] ?? ''));
+        $password = (string) ($_POST['password'] ?? '');
+        $passwordConfirmation = (string) ($_POST['password_confirmation'] ?? '');
+
+        try {
+            $this->userService->resetPassword($token, $password, $passwordConfirmation);
+
+            $_SESSION['success'] = 'Senha atualizada com sucesso. Faça login novamente.';
+            header('Location: /signin');
             exit();
         } catch (Exception $e) {
             $_SESSION['error'] = $e->getMessage();
-            
-            // CHAMA A VIEW DE VOLTA: Se der alguma falha crítica, recarrega a janela correspondente
-            $this->renderForgotPassword();
+            header('Location: /reset-password?token=' . urlencode($token));
             exit();
         }
     }

@@ -24,7 +24,7 @@ function getConnection(): PDO
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
         } catch (PDOException $e) {
-            var_dump($e);
+            error_log('Database connection failed: ' . $e->getMessage());
             http_response_code(500);
             echo "Erro interno ao conectar ao banco de dados.";
             exit;

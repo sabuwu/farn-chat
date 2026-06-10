@@ -105,4 +105,42 @@ final class UserRepository
             ':id'         => $userId,
         ]);
     }
+
+    public function findByResetToken(string $token): ?array
+    {
+        $sql = <<<SQL
+            SELECT *
+            FROM users
+            WHERE reset_token = :token
+              AND token_expires_at > NOW()
+            LIMIT 1
+        SQL;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':token' => $token,
+        ]);
+
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $user ?: null;
+    }
+
+    public function updatePasswordById(int $userId, string $passwordHash): bool
+    {
+        $sql = <<<SQL
+            UPDATE users
+            SET password_hash = :password_hash,
+                reset_token = NULL,
+                token_expires_at = NULL
+            WHERE id = :id
+        SQL;
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            ':password_hash' => $passwordHash,
+            ':id' => $userId,
+        ]);
+    }
 }

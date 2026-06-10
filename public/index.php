@@ -47,6 +47,8 @@ $router->get('/signin', [UserController::class, 'renderSignin']);
 $router->post('/signin', [UserController::class, 'signIn']);
 $router->get('/forgot-password', [UserController::class, 'renderForgotPassword']);
 $router->post('/forgot-password', [UserController::class, 'forgotPassword']);
+$router->get('/reset-password', [UserController::class, 'renderResetPassword']);
+$router->post('/reset-password', [UserController::class, 'resetPassword']);
 
 # =+=+=+==+=+=+= ÁREA AUTENTICADA (DASHBOARD) =+=+=+==+=+=+=
 $router->get('/dashboard', [ChatController::class, 'index']);

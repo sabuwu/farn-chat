@@ -26,6 +26,13 @@ services:
       DB_NAME: ${DB_NAME:-farn_chat}
       DB_USER: ${DB_USER:-root}
       DB_PASSWORD: ${DB_PASSWORD:-root_secure_pass}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@farn-chat.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Farn-Chat}
 
     volumes:
       - ./:/var/www/html
@@ -34,6 +41,7 @@ services:
 
     depends_on:
       - mysql
+      - mailhog
 
   mysql:
     image: mysql:8.4
@@ -52,6 +60,14 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
   phpmyadmin:
     image: phpmyadmin:latest

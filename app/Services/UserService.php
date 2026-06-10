@@ -3,6 +3,8 @@ namespace app\Services;
 
 use app\Repositories\UserRepository;
 use Exception;
+use PHPMailer\PHPMailer\Exception as MailerException;
+use PHPMailer\PHPMailer\PHPMailer;
 
 class UserService
 {
@@ -98,8 +100,83 @@ class UserService
 
             $this->userRepository->saveResetToken($user['id'], $token, $expiresAt);
 
-            $resetLink = "http://localhost:8080/reset-password?token=" . $token;
-            error_log("[RESET PASSWORD farn-chat] Link para {$email}: {$resetLink}", 0);
+            $resetLink = rtrim((string) ($_ENV['APP_URL'] ?? 'http://localhost:8080'), '/') . '/reset-password?token=' . urlencode($token);
+            $this->sendPasswordResetEmail($user['email'], $user['username'], $resetLink);
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function resetPassword(string $token, string $password, string $passwordConfirmation): void
+    {
+        if ($token === '') {
+            throw new Exception('Token de recuperação inválido... ;-;');
+        }
+
+        if ($password !== $passwordConfirmation) {
+            throw new Exception('As senhas não conferem... ;-;');
+        }
+
+        $passwordRegex = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/';
+
+        if (!preg_match($passwordRegex, $password)) {
+            throw new Exception("A senha deve ter no mínimo 8 caracteres, contendo pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial... ;-;");
+        }
+
+        $user = $this->userRepository->findByResetToken($token);
+
+        if (!$user) {
+            throw new Exception('Token inválido ou expirado... ;-;');
+        }
+
+        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+        $this->userRepository->updatePasswordById((int) $user['id'], $hashedPassword);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function sendPasswordResetEmail(string $recipientEmail, string $username, string $resetLink): void
+    {
+        try {
+            $mailer = new PHPMailer(true);
+            $mailer->CharSet = 'UTF-8';
+
+            $host = trim((string) ($_ENV['MAIL_HOST'] ?? $_ENV['SMTP_HOST'] ?? ''));
+            if ($host !== '') {
+                $mailer->isSMTP();
+                $mailer->Host = $host;
+                $mailer->Port = (int) ($_ENV['MAIL_PORT'] ?? $_ENV['SMTP_PORT'] ?? 587);
+                $mailer->SMTPAuth = true;
+                $mailer->Username = (string) ($_ENV['MAIL_USERNAME'] ?? $_ENV['SMTP_USERNAME'] ?? '');
+                $mailer->Password = (string) ($_ENV['MAIL_PASSWORD'] ?? $_ENV['SMTP_PASSWORD'] ?? '');
+
+                $encryption = strtolower((string) ($_ENV['MAIL_ENCRYPTION'] ?? $_ENV['SMTP_ENCRYPTION'] ?? 'tls'));
+                if ($encryption === 'ssl' || $encryption === 'tls') {
+                    $mailer->SMTPSecure = $encryption;
+                }
+            } else {
+                $mailer->isMail();
+            }
+
+            $fromAddress = (string) ($_ENV['MAIL_FROM_ADDRESS'] ?? 'no-reply@localhost');
+            $fromName = (string) ($_ENV['MAIL_FROM_NAME'] ?? ($_ENV['APP_NAME'] ?? 'Farn-Chat'));
+
+            $mailer->setFrom($fromAddress, $fromName);
+            $mailer->addAddress($recipientEmail, $username);
+            $mailer->Subject = 'Recuperação de senha - Farn-Chat';
+            $mailer->isHTML(true);
+            $mailer->Body = sprintf(
+                '<p>Olá, %s.</p><p>Recebemos um pedido para redefinir sua senha no Farn-Chat.</p><p><a href="%s">Clique aqui para criar uma nova senha</a></p><p>Este link expira em 1 hora.</p>',
+                htmlspecialchars($username, ENT_QUOTES, 'UTF-8'),
+                htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8')
+            );
+            $mailer->AltBody = "Olá, {$username}.\n\nAcesse o link para redefinir sua senha:\n{$resetLink}\n\nEste link expira em 1 hora.";
+
+            $mailer->send();
+        } catch (MailerException $e) {
+            throw new Exception('Não foi possível enviar o e-mail de recuperação no momento.');
         }
     }
 }

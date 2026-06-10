@@ -7,6 +7,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$composerAutoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+
+    if (class_exists(\Dotenv\Dotenv::class)) {
+        $dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__));
+        $dotenv->safeLoad();
+    }
+}
+
 // REGISTRO DO AUTOLOADER DE TERRA ARRASADA
 spl_autoload_register(function (string $className) {
     // 1. O Router manda: "App\Controllers\HomeController"

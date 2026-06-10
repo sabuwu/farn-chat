@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSendMessage = document.getElementById('btn-send-message') || document.querySelector('#chat-footer button');
 
     const myUsername = 'sabu'; // Seu nick OpSec fixado para os testes
+    const escapeHtml = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 
     // --- 1. FUNÇÃO: BUSCAR HISTÓRICO DE MENSAGENS (READ) ---
     async function fetchChatMessages() {
@@ -58,10 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-baseline gap-2">
-                                <span class="font-semibold text-slate-200 text-sm hover:underline cursor-pointer">${author}</span>
-                                <span class="text-[10px] text-slate-500 font-mono">${time}</span>
+                                <span class="font-semibold text-slate-200 text-sm hover:underline cursor-pointer">${escapeHtml(author)}</span>
+                                <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(time)}</span>
                             </div>
-                            <p class="text-slate-300 text-sm mt-1 break-words leading-relaxed">${text}</p>
+                            <p class="text-slate-300 text-sm mt-1 break-words leading-relaxed">${escapeHtml(text)}</p>
                         </div>
                     `;
                     chatFeed.appendChild(msgElement);
@@ -118,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#channel-list button').forEach(b => b.classList.remove('bg-slate-800', 'text-indigo-400', 'font-semibold'));
         
         chatFooter.classList.remove('hidden');
-        chatFeed.innerHTML = `<div class="text-xs text-slate-500 font-mono italic animate-pulse p-4">Sintonizando frequência de #${channelName}...</div>`;
+        chatFeed.innerHTML = `<div class="text-xs text-slate-500 font-mono italic animate-pulse p-4">Sintonizando frequência de #${escapeHtml(channelName)}...</div>`;
         messageInput.placeholder = `Transmitir em #${channelName}`;
 
         if (pollingInterval) clearInterval(pollingInterval);
@@ -142,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             res.data.forEach(server => {
                 const btn = document.createElement('button');
                 btn.className = `w-full text-left text-sm px-3 py-2 rounded-xl transition-all font-medium ${activeServerId == server.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
-                btn.innerHTML = `<div class="truncate">${server.fullname}</div>`;
+                btn.innerHTML = `<div class="truncate">${escapeHtml(server.fullname)}</div>`;
                 
                 btn.onclick = () => selectServer(server.id, server.fullname, server.description);
                 serverList.appendChild(btn);
@@ -168,10 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadServers();
         loadChannels(id);
         
-        chatFeed.innerHTML = `
-            <div class="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs font-mono">
-                Sintonizado em [${name}]. Escolha um canal de texto na barra lateral.
-            </div>`;
+            chatFeed.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs font-mono">
+                    Sintonizado em [${escapeHtml(name)}]. Escolha um canal de texto na barra lateral.
+                </div>`;
     }
 
     // --- FUNÇÃO: CARREGAR CANAIS (READ) ---
@@ -189,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             res.data.forEach(channel => {
                 const btn = document.createElement('button');
                 btn.className = `w-full text-left text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${activeChannelId == channel.id ? 'bg-slate-800 text-indigo-400 font-semibold' : 'text-slate-500 hover:bg-slate-800/40 hover:text-slate-300'}`;
-                btn.innerHTML = `<span class="text-slate-600 font-mono">#</span> <span class="truncate">${channel.fullname}</span>`;
+                btn.innerHTML = `<span class="text-slate-600 font-mono">#</span> <span class="truncate">${escapeHtml(channel.fullname)}</span>`;
                 
                 btn.onclick = () => selectChannel(channel.id, channel.fullname);
                 channelList.appendChild(btn);
